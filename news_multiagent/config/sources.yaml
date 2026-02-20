@@ -1,0 +1,148 @@
+# Maritime News Intelligence - Source Configuration
+# Graph-Enhanced Multi-Agent System Configuration
+
+# Primary maritime news sources with authority ranking
+news_sources:
+  - name: "The Loadstar"
+    homepage: "https://theloadstar.com/"
+    authority_rank: 10
+    priority: "high"
+    target_count: 3
+    categories:
+      - "red sea"
+      - "geopolitical"
+      - "congestion"
+      - "operational issues"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.1  # Boost similarity for authoritative sources
+      temporal_window: 30    # Days to look back for cross-temporal analysis
+
+  - name: "Container News"
+    homepage: "https://container-news.com/"
+    authority_rank: 9
+    priority: "high"
+    target_count: 3
+    categories:
+      - "congestion"
+      - "operational issues"
+      - "shipping line announcements"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.08
+
+  - name: "gCaptain"
+    homepage: "https://gcaptain.com/"
+    authority_rank: 7
+    priority: "medium"
+    target_count: 3
+    specialization: "maritime safety and incidents"
+    categories:
+      - "vessel/container incidents"
+      - "weather-related"
+      - "operational issues"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.05
+
+  - name: "Kuehne+Nagel"
+    homepage: "https://mykn.kuehne-nagel.com/news/"
+    authority_rank: 6
+    priority: "medium"
+    target_count: 3
+    source_type: "logistics_provider"
+    categories:
+      - "shipping line announcements"
+      - "operational issues"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.03
+
+  - name: "Maersk"
+    homepage: "https://maersk.com/news"
+    authority_rank: 8
+    priority: "high"
+    target_count: 3
+    source_type: "carrier"
+    categories:
+      - "shipping line announcements"
+      - "operational issues"
+      - "red sea"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.06
+      carrier_boost: 0.05  # Additional boost for carrier announcements
+
+  - name: "CMA CGM"
+    homepage: "https://www.cma-cgm.com/latest-news"
+    authority_rank: 8
+    priority: "high"
+    target_count: 3
+    source_type: "carrier"
+    categories:
+      - "shipping line announcements"
+      - "operational issues"
+      - "red sea"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.06
+      carrier_boost: 0.05
+
+  - name: "Port News"
+    homepage: "https://en.portnews.ru/news/"
+    authority_rank: 5
+    priority: "medium"
+    target_count: 3
+    regional_focus: "global_ports"
+    categories:
+      - "congestion"
+      - "operational issues"
+      - "geopolitical"
+    graph_features:
+      enable_clustering: true
+      similarity_boost: 0.02
+
+# Graph-specific configuration
+graph_settings:
+  # Similarity thresholds for different relationship types
+  similarity_thresholds:
+    title_similarity: 0.75        # Minimum title similarity for clustering
+    content_similarity: 0.70      # Minimum content similarity
+    geographic_similarity: 0.80   # Minimum port/vessel overlap
+    temporal_similarity: 0.60     # Minimum temporal proximity
+
+  # Similarity calculation weights
+  similarity_weights:
+    title_similarity: 0.4
+    incident_type_similarity: 0.3
+    geographic_similarity: 0.2
+    temporal_proximity: 0.1
+
+  # Temporal analysis settings
+  temporal_settings:
+    cross_temporal_window_days: 30    # Look back window for duplicates
+    temporal_analysis_frequency: "weekly"  # Run full temporal analysis weekly
+    daily_analysis_window_days: 7     # Daily runs only check last 7 days
+    incident_timeline_days: 14        # Timeline analysis window
+    persistence_threshold_days: 3     # Min days for "persistent" incidents
+    weekly_deep_analysis: true        # Enable comprehensive weekly analysis
+
+  # Clustering parameters
+  clustering:
+    min_cluster_size: 2               # Minimum articles per cluster
+    major_incident_threshold: 3       # Articles needed for "major incident"
+    authority_clustering_boost: true  # Boost clustering for authoritative sources
+
+  # Graph storage and persistence
+  storage:
+    graph_file_path: "./data/incident_graph.pkl"
+    backup_retention_days: 90
+    cleanup_threshold_days: 90        # Remove articles older than this
+    auto_backup_interval_hours: 24
+
+  # Performance optimization
+  performance:
+    max_nodes: 10000                  # Maximum nodes in graph
+    max_edges_per_node: 50           # Limit edges per node
+    similarity_cache_size: 1000      # Cache similarity calculations
+    batch_processing_size: 100       # Process articles in batches

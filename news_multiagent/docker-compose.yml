@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: maritime-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: maritime_intelligence
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${MARITIME_POSTGRES_PASSWORD:-maritime_secure_password}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d maritime_intelligence"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - maritime-network
+
+  # Redis (optional - for additional caching)
+  redis:
+    image: redis:7-alpine
+    container_name: maritime-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - maritime-network
+
+  # Main Application
+  maritime-intelligence:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: maritime-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database connection
+      MARITIME_POSTGRES_HOST: postgres
+      MARITIME_POSTGRES_PORT: 5432
+      MARITIME_POSTGRES_DB: maritime_intelligence
+      MARITIME_POSTGRES_USER: postgres
+      MARITIME_POSTGRES_PASSWORD: ${MARITIME_POSTGRES_PASSWORD:-maritime_secure_password}
+
+      # Anthropic API
+      MARITIME_ANTHROPIC_API_KEY: ${MARITIME_ANTHROPIC_API_KEY}
+
+      # Application configuration
+      MARITIME_MODEL_NAME: ${MARITIME_MODEL_NAME:-claude-3-5-sonnet-20241022}
+      MARITIME_MAX_TOKENS: ${MARITIME_MAX_TOKENS:-8000}
+      MARITIME_TEMPERATURE: ${MARITIME_TEMPERATURE:-0.1}
+
+      # Workflow settings
+      MARITIME_MAX_RETRIES: ${MARITIME_MAX_RETRIES:-3}
+      MARITIME_PARALLEL_SOURCES: ${MARITIME_PARALLEL_SOURCES:-7}
+      MARITIME_PARALLEL_SEARCHES: ${MARITIME_PARALLEL_SEARCHES:-6}
+
+      # Logging
+      MARITIME_LOG_LEVEL: ${MARITIME_LOG_LEVEL:-INFO}
+      MARITIME_LOG_FORMAT: ${MARITIME_LOG_FORMAT:-json}
+
+      # Execution
+      MARITIME_EXECUTION_TIMEOUT: ${MARITIME_EXECUTION_TIMEOUT:-600}
+      MARITIME_CHECKPOINT_ENABLED: ${MARITIME_CHECKPOINT_ENABLED:-true}
+
+      # Source configuration
+      MARITIME_TARGET_ARTICLES_PER_SOURCE: ${MARITIME_TARGET_ARTICLES_PER_SOURCE:-3}
+      MARITIME_DATE_RANGE_DAYS: ${MARITIME_DATE_RANGE_DAYS:-2}
+
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - maritime-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "from config.settings import get_settings; get_settings()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Web Dashboard (FastAPI server)
+  maritime-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: maritime-dashboard
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      maritime-intelligence:
+        condition: service_healthy
+    environment:
+      MARITIME_POSTGRES_HOST: postgres
+      MARITIME_POSTGRES_PASSWORD: ${MARITIME_POSTGRES_PASSWORD:-maritime_secure_password}
+      MARITIME_LOG_FORMAT: json
+    command: ["python", "-m", "uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - maritime-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Monitoring: Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: maritime-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - maritime-network
+
+  # Monitoring: Grafana (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: maritime-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - maritime-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  maritime-network:
+    driver: bridge
+    name: maritime-network

@@ -1,0 +1,273 @@
+# Maritime News Intelligence - Category Configuration
+# Graph-Enhanced Categorization and Clustering Rules
+
+# Primary maritime news categories with graph-specific settings
+categories:
+  red_sea:
+    display_name: "Red Sea & Suez Canal"
+    description: "Security threats, Houthi attacks, route diversions, Suez Canal incidents"
+    severity_bias: "high"  # This category tends towards high severity
+    keywords:
+      - "red sea"
+      - "suez canal"
+      - "houthi"
+      - "bab el mandeb"
+      - "route diversion"
+      - "cape of good hope"
+    graph_settings:
+      clustering_priority: "very_high"    # Prioritize clustering for security incidents
+      similarity_boost: 0.15             # Boost similarity detection
+      geographic_keywords:
+        - "suez"
+        - "aden"
+        - "djibouti"
+        - "red sea"
+      temporal_significance: 7            # Days to consider incidents related
+
+  geopolitical:
+    display_name: "Geopolitical & Trade"
+    description: "Sanctions, trade wars, vessel seizures, diplomatic tensions"
+    severity_bias: "high"
+    keywords:
+      - "sanctions"
+      - "trade war"
+      - "vessel seizure"
+      - "embargo"
+      - "diplomatic"
+      - "blockade"
+    graph_settings:
+      clustering_priority: "high"
+      similarity_boost: 0.12
+      cross_category_links:             # Can link with other categories
+        - "red_sea"
+        - "shipping_line_announcements"
+      temporal_significance: 14
+
+  weather_related:
+    display_name: "Weather & Natural Disasters"
+    description: "Storms, hurricanes, typhoons, ice conditions, port weather closures"
+    severity_bias: "medium"
+    keywords:
+      - "storm"
+      - "hurricane"
+      - "typhoon"
+      - "cyclone"
+      - "ice"
+      - "fog"
+      - "weather closure"
+    graph_settings:
+      clustering_priority: "medium"
+      similarity_boost: 0.08
+      seasonal_patterns: true           # Consider seasonal clustering
+      geographic_clustering: true       # Strong geographic component
+      temporal_significance: 5
+
+  congestion:
+    display_name: "Port Congestion & Delays"
+    description: "Port congestion, berth delays, terminal capacity issues, vessel queues"
+    severity_bias: "medium"
+    keywords:
+      - "congestion"
+      - "delays"
+      - "berth"
+      - "terminal capacity"
+      - "queue"
+      - "waiting time"
+      - "backlog"
+    graph_settings:
+      clustering_priority: "high"        # Port congestion often spreads
+      similarity_boost: 0.10
+      geographic_clustering: true
+      cascade_analysis: true             # Analyze cascade effects
+      temporal_significance: 10
+
+  operational_issues:
+    display_name: "Operational Issues"
+    description: "Equipment failures, strikes, IT outages, terminal closures"
+    severity_bias: "high"
+    keywords:
+      - "strike"
+      - "equipment failure"
+      - "system outage"
+      - "terminal closure"
+      - "crane failure"
+      - "labor dispute"
+    graph_settings:
+      clustering_priority: "very_high"   # Operational issues often cluster
+      similarity_boost: 0.13
+      multi_port_impact: true           # Can affect multiple ports
+      temporal_significance: 7
+
+  us_tariffs:
+    display_name: "US Tariffs & Trade Policy"
+    description: "Tariff policies, trade restrictions, customs delays, regulatory changes"
+    severity_bias: "medium"
+    keywords:
+      - "tariff"
+      - "trade restriction"
+      - "customs"
+      - "regulatory"
+      - "trade policy"
+      - "import duty"
+    graph_settings:
+      clustering_priority: "medium"
+      similarity_boost: 0.06
+      policy_tracking: true             # Track policy development
+      temporal_significance: 30         # Long-term policy impacts
+
+  shipping_line_announcements:
+    display_name: "Shipping Line Announcements"
+    description: "Service changes, route adjustments, capacity modifications"
+    severity_bias: "low"
+    keywords:
+      - "service change"
+      - "route adjustment"
+      - "capacity"
+      - "schedule change"
+      - "new service"
+      - "service suspension"
+    graph_settings:
+      clustering_priority: "low"        # Usually independent announcements
+      similarity_boost: 0.04
+      carrier_specific: true            # Group by shipping line
+      temporal_significance: 14
+
+  vessel_container_incidents:
+    display_name: "Vessel & Container Incidents"
+    description: "Collisions, groundings, fires, container losses, mechanical failures"
+    severity_bias: "medium"
+    keywords:
+      - "collision"
+      - "grounding"
+      - "fire"
+      - "container loss"
+      - "mechanical failure"
+      - "engine failure"
+      - "accident"
+    graph_settings:
+      clustering_priority: "medium"
+      similarity_boost: 0.07
+      vessel_tracking: true             # Track specific vessel incidents
+      geographic_clustering: true
+      temporal_significance: 3
+
+# Cross-category clustering rules
+cross_category_relationships:
+  # Red Sea incidents often trigger shipping line announcements
+  red_sea_shipping_announcements:
+    primary: "red_sea"
+    secondary: "shipping_line_announcements"
+    relationship_strength: 0.8
+    typical_lag_days: 1
+
+  # Operational issues can cause congestion
+  operational_congestion:
+    primary: "operational_issues"
+    secondary: "congestion"
+    relationship_strength: 0.7
+    typical_lag_days: 2
+
+  # Weather can cause both operational issues and congestion
+  weather_operational:
+    primary: "weather_related"
+    secondary: ["operational_issues", "congestion"]
+    relationship_strength: 0.6
+    typical_lag_days: 1
+
+  # Geopolitical events trigger policy responses
+  geopolitical_policy:
+    primary: "geopolitical"
+    secondary: "us_tariffs"
+    relationship_strength: 0.5
+    typical_lag_days: 7
+
+# Severity escalation patterns
+severity_patterns:
+  # Patterns that typically escalate
+  escalation_indicators:
+    - pattern: "single_port_to_multi_port"
+      description: "Issue spreads from one port to multiple ports"
+      severity_increase: 1  # Increase severity level by 1
+
+    - pattern: "equipment_to_strike"
+      description: "Equipment failure leads to labor disputes"
+      severity_increase: 1
+
+    - pattern: "weather_to_closure"
+      description: "Weather warning becomes port closure"
+      severity_increase: 1
+
+  # Patterns that typically de-escalate
+  deescalation_indicators:
+    - pattern: "closure_to_partial_operations"
+      description: "Full closure becomes partial operations"
+      severity_decrease: 1
+
+    - pattern: "strike_resolution"
+      description: "Strike is resolved"
+      severity_decrease: 2
+
+# Graph analysis rules
+graph_analysis:
+  # Temporal analysis scheduling
+  temporal_scheduling:
+    daily_runs:
+      cross_temporal_window_days: 7    # Daily runs: only check last 7 days
+      enable_deep_clustering: false    # Skip intensive clustering for daily runs
+      quick_duplicate_check: true      # Fast duplicate detection only
+
+    weekly_runs:
+      cross_temporal_window_days: 30   # Weekly runs: full 30-day analysis
+      enable_deep_clustering: true     # Full graph clustering analysis
+      incident_timeline_reconstruction: true  # Complete timeline analysis
+      graph_optimization: true         # Clean up and optimize graph weekly
+
+  # Incident significance scoring
+  incident_scoring:
+    single_source: 1.0                 # Base score for single-source incident
+    multi_source_multiplier: 1.5       # Boost for multi-source incidents
+    authoritative_source_boost: 0.2    # Extra boost for high-authority sources
+    temporal_persistence_boost: 0.3    # Boost for incidents lasting multiple days
+
+  # Connected component analysis
+  component_analysis:
+    min_component_size: 2              # Minimum size for significant component
+    major_incident_size: 3             # Size threshold for "major incident"
+    cascade_detection_threshold: 5     # Size for potential cascade analysis
+
+  # Timeline development tracking
+  timeline_tracking:
+    min_stages: 2                      # Minimum stages for timeline analysis
+    max_gap_days: 5                    # Max gap between related articles
+    development_indicators:
+      - "initial report"
+      - "confirmation"
+      - "expansion"
+      - "resolution"
+      - "aftermath"
+
+# Dashboard presentation rules
+dashboard_rules:
+  # Category presentation order (high priority first)
+  display_priority:
+    1: "red_sea"
+    2: "operational_issues"
+    3: "geopolitical"
+    4: "congestion"
+    5: "weather_related"
+    6: "vessel_container_incidents"
+    7: "us_tariffs"
+    8: "shipping_line_announcements"
+
+  # Clustering display thresholds
+  cluster_display:
+    min_cluster_size_for_display: 2
+    max_clusters_per_category: 10
+    show_single_article_clusters: false
+
+  # Timeline display settings
+  timeline_display:
+    max_incidents_shown: 15
+    min_development_stages: 2
+    show_resolved_incidents: true
+    timeline_span_days: 30
